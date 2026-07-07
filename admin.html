@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Term Plan Leads — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-navy: #233253;
+      --color-red: #ED1C24;
+      --color-text: #333;
+      --color-grey: #9198A9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: #f2fbff;
+      color: var(--color-text);
+    }
+    .admin-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+    h1 {
+      color: var(--color-navy);
+      font-size: 28px;
+      margin: 0 0 8px;
+    }
+    .admin-sub {
+      color: var(--color-grey);
+      font-size: 14px;
+      margin: 0 0 24px;
+    }
+    .admin-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .admin-count {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-navy);
+    }
+    .btn-refresh {
+      background: var(--color-red);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 20px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-refresh:hover { background: #c81820; }
+    .admin-card {
+      background: #fff;
+      border: 1px solid #e3e8ed;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid #eceff2;
+      white-space: nowrap;
+    }
+    th {
+      background: #f8fafb;
+      color: var(--color-navy);
+      font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+    .empty-state, .error-state, .loading-state {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--color-grey);
+      font-size: 14px;
+    }
+    .error-state { color: var(--color-red); }
+    a.back-link {
+      display: inline-block;
+      margin-top: 24px;
+      color: var(--color-navy);
+      font-size: 14px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+    <h1>Term Plan Form Submissions</h1>
+    <p class="admin-sub">All leads collected from the &ldquo;Connect with us now&rdquo; form on the homepage.</p>
+
+    <div class="admin-toolbar">
+      <span class="admin-count" id="leadCount">Loading...</span>
+      <button type="button" class="btn-refresh" id="refreshBtn">Refresh</button>
+    </div>
+
+    <div class="admin-card">
+      <div class="table-wrap" id="tableWrap">
+        <p class="loading-state">Loading submissions...</p>
+      </div>
+    </div>
+
+    <a href="index.html" class="back-link">&larr; Back to homepage</a>
+  </div>
+
+  <script>
+    const tableWrap = document.getElementById('tableWrap');
+    const leadCount = document.getElementById('leadCount');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
+      return d.toLocaleString();
+    }
+
+    function renderTable(leads) {
+      if (!leads.length) {
+        tableWrap.innerHTML = '<p class="empty-state">No submissions yet. Submit the form on the homepage to see data here.</p>';
+        leadCount.textContent = '0 submissions';
+        return;
+      }
+
+      leadCount.textContent = `${leads.length} submission${leads.length === 1 ? '' : 's'}`;
+
+      const rows = leads.map((lead) => `
+        <tr>
+          <td>${lead.id}</td>
+          <td>${escapeHtml(lead.full_name || '—')}</td>
+          <td>${escapeHtml(lead.email)}</td>
+          <td>${escapeHtml(lead.mobile || '—')}</td>
+          <td>${escapeHtml(lead.gender || '—')}</td>
+          <td>${escapeHtml(lead.tobacco || '—')}</td>
+          <td>${escapeHtml(lead.dob || '—')}</td>
+          <td>${lead.consent ? 'Yes' : 'No'}</td>
+          <td>${formatDate(lead.created_at)}</td>
+        </tr>
+      `).join('');
+
+      tableWrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Mobile</th>
+              <th>Gender</th>
+              <th>Tobacco</th>
+              <th>DOB</th>
+              <th>Consent</th>
+              <th>Submitted At</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    async function loadLeads() {
+      tableWrap.innerHTML = '<p class="loading-state">Loading submissions...</p>';
+      leadCount.textContent = 'Loading...';
+
+      try {
+        const res = await fetch('/api/term-plan-leads');
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Failed to load leads');
+        }
+
+        renderTable(data.leads);
+      } catch (err) {
+        tableWrap.innerHTML = `<p class="error-state">${escapeHtml(err.message)}. Make sure the server is running (npm start).</p>`;
+        leadCount.textContent = '—';
+      }
+    }
+
+    refreshBtn.addEventListener('click', loadLeads);
+    loadLeads();
+  </script>
+</body>
+</html>

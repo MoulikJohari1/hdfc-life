@@ -1,0 +1,37 @@
+/* ===========================================================
+   Privacy Policy page — styles (uses tokens from style.css)
+   =========================================================== */
+
+.sec-pp-heading { background: #fff; padding: 50px 0 20px; }
+.sec-pp-heading h1 {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--color-navy);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sec-pp-heading .pp-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  background: var(--bg-header);
+  font-size: 26px;
+}
+.sec-pp-heading .hl-red { color: var(--color-red); }
+
+.sec-pp-breadcrumb { background: #f5f8fa; border-bottom: 1px solid #e3e8ec; }
+
+.sec-pp-content { background: #fff; padding: 40px 0 60px; }
+.pp-body { max-width: 1100px; }
+.pp-body p { font-size: 15px; line-height: 1.7; color: #444; margin: 0 0 14px; }
+.pp-body p b { color: var(--color-navy); font-weight: 700; }
+.pp-body p { margin-top: 18px; }
+.pp-body p:first-child { margin-top: 0; }
+.pp-body a { color: var(--color-link); }
+.pp-body ul, .pp-body ol { margin: 0 0 16px 22px; }
+.pp-body ul li, .pp-body ol li { font-size: 15px; line-height: 1.7; color: #444; margin-bottom: 8px; }
+.pp-body ul li p, .pp-body ol li p { margin: 0; }
