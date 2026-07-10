@@ -746,19 +746,53 @@
           <label for="calcEmail">Enter Email <span class="required-mark">*</span></label>
           <input type="email" id="calcEmail" name="email" placeholder="Enter Email" required>
         </div>
+        <div class="calc-field">
+          <label for="calcJurisdiction">Region <span class="required-mark">*</span></label>
+          <select id="calcJurisdiction" name="jurisdiction" required>
+            <option value="" disabled selected>Select Region</option>
+            <option value="Other">Other</option>
+            <option value="Australia">Australia</option>
+            <option value="Canada">Canada</option>
+            <option value="Europa Island">Europa Island</option>
+            <option value="Germany">Germany</option>
+            <option value="India">India</option>
+            <option value="Singapore">Singapore</option>
+            <option value="United Arab Emirates">United Arab Emirates</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="United States">United States</option>
+          </select>
+        </div>
       </div>
 
-      <div class="calc-consent">
+      <!-- <div class="calc-consent">
         <label>
           <input type="checkbox" id="calcConsent" name="consent" checked>
           <span>I authorize HDFC Life and its representatives to contact me through Call, Email, SMS or WhatsApp. This consent overrides my registration under DNC / NDNC (this would mean we would contact you even if you are registered on any Do Not Disturb list).</span>
+        </label>
+      </div> -->
+
+      <div class="calc-cpm-consents">
+        <label class="calc-cpm-consent-item">
+          <input type="checkbox" id="calcConsentMarketing" name="consentMarketing">
+          <span>
+            I authorize HDFC Life and its representatives to contact me through Call, Email, SMS or WhatsApp. This consent overrides my registration under DNC / NDNC (this would mean we would contact you even if you are registered on any Do Not Disturb list).</span>
+        </label>
+        <label class="calc-cpm-consent-item">
+          <input type="checkbox" id="calcConsentKyc" name="consentKyc">
+          <span>I consent to the collection and processing of my personal identifiers and contact details for mandatory KYC checks, identity verification, and issuance, renewal, claims, and servicing of insurance policies as per applicable regulations.</span>
+        </label>
+        <label class="calc-cpm-consent-item">
+          <input type="checkbox" id="calcConsentClaim" name="consentClaim">
+          <span>I consent to verification of my personal information through authorized sources or service providers for KYC, fraud prevention, regulatory compliance, policy servicing, and claims processing.</span>
         </label>
       </div>
 
       <p class="calc-form-message" id="calcFormMessage" role="status" aria-live="polite"></p>
 
+      <p class="calc-privacy-note">Review our <a href="privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a> to learn how we protect and manage your submitted data.</p>
+
       <div class="calc-submit-row">
-        <button type="submit" class="btn-red calc-submit">Connect with us now</button>
+        <button type="button" id="external-submit" class="btn-red calc-submit">Connect with us now</button>
       </div>
     </form>
   </div>
@@ -770,7 +804,7 @@
 </section>
 
 <!-- ============ SEC 09 — "Need Help to Buy a Right Plan?" advisor lead-gen panel ============ -->
-<section class="sec sec-09">
+<!-- <section class="sec sec-09">
   <div class="container advisor-card">
     <div class="advisor-left">
       <h2 class="advisor-title">Need Help to Buy a <span>Right Plan?</span></h2>
@@ -851,7 +885,7 @@
       Disclaimer: By submitting your contact details, you agree to HDFC Life&rsquo;s Privacy Policy and authorize HDFC Life and/or its authorized Service Providers to verify the above information and/or contact you to assist you with the purchase. This will override any HDFC registration made by you. <a href="#">&hellip;Read More</a>
     </div>
   </div>
-</section>
+</section> -->
 <section class="sec sec-10">
   <div class="container box-center">
     <a href="#" target="_blank" aria-label="How Does Life Insurance Work">
@@ -2368,5 +2402,39 @@
 </div>
 
 <script src="script.js"></script>
+
+<!-- TrustArc CPM — hidden host container -->
+<div id="cpm-form" style="display: none"></div>
+
+<!-- TrustArc CPM initialisation -->
+<script>
+  !function(){
+    "use strict";
+    var t=document.createElement("script");
+    t.src="https://cpm-form.trustarc.com/browser/client.js",
+    t.type="text/javascript",
+    t.defer=!0,document.body.appendChild(t),
+    window.trustarc=window.trustarc||{};
+    var r=window.trustarc;
+    r.upm=[];
+    for(var n=["init","destroy","externalSubmit"],e=0;e<n.length;e++){
+      var o=n[e];
+      r.upm[o]=r.upm[o]||function(t){
+        return function(){
+          var n=Array.prototype.slice.call(arguments);
+          r.upm.push([t,n])
+        }
+      }(o)
+    }
+    r.upm.init({
+      brandId:'1170da8e-ac0c-4bb0-b4ad-fe9c0322825a',
+      consentFormId:'2d84def1-2edd-4c35-9fc1-83cf21178d27',
+      containerId: 'cpm-form',
+    },
+    (error) => {
+      console.log('[CPM Error]', error);
+    })
+  }();
+</script>
 </body>
 </html>

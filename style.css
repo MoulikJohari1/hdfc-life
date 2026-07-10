@@ -1024,13 +1024,45 @@ h1, h2, h3, h4, h5, h6 { margin: 0; font-family: var(--font-family); }
 .sec-08 .mobile-row { display: flex; gap: 8px; }
 .sec-08 .mobile-row .code-input { flex: 0 0 54px; text-align: center; }
 .sec-08 .mobile-row input:last-child { flex: 1 1 auto; }
+.sec-08 .calc-field select {
+  width: 100%;
+  border: 1px solid #cfd6dd;
+  border-radius: 4px;
+  padding: 11px 12px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--color-text);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+.sec-08 .calc-field select:focus { outline: 2px solid var(--color-red); outline-offset: 1px; }
 .sec-08 .calc-consent {
   border-top: 1px solid #eceff2;
   padding-top: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 .sec-08 .calc-consent label { display: flex; align-items: flex-start; gap: 10px; }
 .sec-08 .calc-consent span { font-size: 11px; color: var(--color-grey); line-height: 1.5; }
+.sec-08 .calc-cpm-consents {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0 20px;
+  border-bottom: 1px solid #eceff2;
+  margin-bottom: 20px;
+}
+.sec-08 .calc-cpm-consent-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+.sec-08 .calc-cpm-consent-item input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
+.sec-08 .calc-cpm-consent-item span { font-size: 11px; color: var(--color-grey); line-height: 1.5; }
 .sec-08 .required-mark { color: var(--color-red); }
 .sec-08 .calc-form-message {
   text-align: center;
@@ -1040,6 +1072,26 @@ h1, h2, h3, h4, h5, h6 { margin: 0; font-family: var(--font-family); }
 }
 .sec-08 .calc-form-message--success { color: #1a7f37; font-weight: 600; }
 .sec-08 .calc-form-message--error { color: var(--color-red); font-weight: 600; }
+/* TrustArc CPM — keep the host container and all its children invisible */
+#cpm-form,
+#cpm-form * {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.sec-08 .calc-privacy-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-grey);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+.sec-08 .calc-privacy-note a {
+  color: var(--color-red);
+  text-decoration: underline;
+}
+.sec-08 .calc-privacy-note a:hover { text-decoration: none; }
 .sec-08 .calc-submit-row { text-align: center; }
 .sec-08 .calc-submit { padding: 13px 40px; font-size: 14px; }
 .sec-08 .calc-submit:disabled { opacity: 0.7; cursor: not-allowed; }
