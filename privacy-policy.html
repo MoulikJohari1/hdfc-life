@@ -603,6 +603,23 @@
   </div>
 </section>
 
+<!-- ============ COOKIE SETTINGS + PREFERENCE CENTER ============ -->
+<section class="sec sec-cookie-settings">
+  <div class="container">
+    <div class="ck-card">
+      <h2 class="ck-title">Cookie Settings</h2>
+      <p class="ck-desc">We use cookies and similar technologies to help the website function, understand how it is used and support analytics and advertising. You can review and change which categories of cookies you allow at any time.</p>
+      <button type="button" class="btn-red ck-open-cookies">Cookie Settings</button>
+    </div>
+
+    <div class="ck-card">
+      <h2 class="ck-title">Preference Center</h2>
+      <p class="ck-desc">Manage the consent you have provided for communication and data-processing preferences. To continue, we first need to verify the email address linked to your preferences.</p>
+      <button type="button" class="btn-outline-red ck-open-preference">Preference Center</button>
+    </div>
+  </div>
+</section>
+
 <p class="cs-arn">ARN: INT/ED/01/26/30966</p>
 
 <footer class="sec sec-footer">
@@ -987,6 +1004,84 @@
 </div>
 
 
+
+<!-- ============ COOKIE SETTINGS MODAL ============ -->
+<div class="ck-modal" id="cookieModal" aria-hidden="true">
+  <div class="ck-modal-overlay" data-ck-close></div>
+  <div class="ck-modal-box" role="dialog" aria-modal="true" aria-labelledby="cookieModalTitle">
+    <button type="button" class="ck-modal-close" data-ck-close aria-label="Close">&times;</button>
+    <h3 class="ck-modal-title" id="cookieModalTitle">Manage Cookie Preferences</h3>
+    <p class="ck-modal-sub">Choose which categories of cookies you want to allow. Strictly necessary cookies are always active because the site cannot function without them.</p>
+
+    <div class="ck-option">
+      <div class="ck-option-text">
+        <h4>Strictly Necessary</h4>
+        <p>Required for core site functionality such as security, network management and accessibility.</p>
+      </div>
+      <label class="ck-switch">
+        <input type="checkbox" checked disabled>
+        <span class="ck-slider"></span>
+      </label>
+    </div>
+
+    <div class="ck-option">
+      <div class="ck-option-text">
+        <h4>Functional</h4>
+        <p>Enable enhanced functionality and personalisation, such as remembering your preferences.</p>
+      </div>
+      <label class="ck-switch">
+        <input type="checkbox" data-cookie="functional" checked>
+        <span class="ck-slider"></span>
+      </label>
+    </div>
+
+    <div class="ck-option">
+      <div class="ck-option-text">
+        <h4>Analytics &amp; Performance</h4>
+        <p>Help us understand how visitors use the site so we can measure and improve performance.</p>
+      </div>
+      <label class="ck-switch">
+        <input type="checkbox" data-cookie="analytics" checked>
+        <span class="ck-slider"></span>
+      </label>
+    </div>
+
+    <div class="ck-option">
+      <div class="ck-option-text">
+        <h4>Targeting &amp; Advertising</h4>
+        <p>Used to deliver relevant advertising and to measure the effectiveness of campaigns.</p>
+      </div>
+      <label class="ck-switch">
+        <input type="checkbox" data-cookie="advertising">
+        <span class="ck-slider"></span>
+      </label>
+    </div>
+
+    <div class="ck-modal-actions">
+      <button type="button" class="btn-outline-red ck-reject-all">Reject All</button>
+      <button type="button" class="btn-outline-red ck-accept-all">Accept All</button>
+      <button type="button" class="btn-red ck-save-cookies">Save Preferences</button>
+    </div>
+    <p class="ck-modal-message" id="cookieMessage"></p>
+  </div>
+</div>
+
+<!-- ============ PREFERENCE CENTER MODAL ============ -->
+<div class="ck-modal" id="preferenceModal" aria-hidden="true">
+  <div class="ck-modal-overlay" data-ck-close></div>
+  <div class="ck-modal-box" role="dialog" aria-modal="true" aria-labelledby="preferenceModalTitle">
+    <button type="button" class="ck-modal-close" data-ck-close aria-label="Close">&times;</button>
+    <h3 class="ck-modal-title" id="preferenceModalTitle">Preference Center</h3>
+    <p class="ck-modal-sub">Enter the email address associated with your HDFC Life communications to continue and modify your consent.</p>
+
+    <form id="preferenceEmailForm" class="ck-email-form" novalidate>
+      <label for="preferenceEmail" class="ck-email-label">Email address</label>
+      <input type="email" id="preferenceEmail" class="ck-email-input" placeholder="Enter your email id" required>
+      <button type="submit" class="btn-red ck-email-submit">Continue</button>
+    </form>
+    <p class="ck-modal-message" id="preferenceMessage"></p>
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>
