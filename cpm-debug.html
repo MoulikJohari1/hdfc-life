@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrustArc CPM Debug</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 24px; color: #1a2b4a; }
+    h1 { font-size: 20px; }
+    h2 { font-size: 15px; margin-top: 28px; }
+    .cols { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; }
+    .col { flex: 1 1 420px; min-width: 360px; }
+    #cpm-form {
+      border: 2px dashed #c00;
+      padding: 16px;
+      border-radius: 8px;
+      min-height: 80px;
+      background: #fafafa;
+    }
+    #fieldDump {
+      background: #0d1117;
+      color: #b3f5c5;
+      padding: 14px;
+      border-radius: 8px;
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 520px;
+      overflow: auto;
+    }
+    button {
+      background: #e30613; color: #fff; border: 0; border-radius: 4px;
+      padding: 10px 18px; font-size: 14px; cursor: pointer; margin-right: 8px;
+    }
+    button.secondary { background: #1a2b4a; }
+    label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+    input, select { width: 100%; max-width: 340px; padding: 8px; font-size: 13px; box-sizing: border-box; }
+    .result { margin-top: 12px; font-weight: 600; }
+    .result.ok { color: #1a7f37; }
+    .result.err { color: #e30613; }
+  </style>
+</head>
+<body>
+  <h1>TrustArc CPM Debug Tool</h1>
+  <p>The CPM form is rendered <strong>visibly</strong> here so we can inspect its real field UIDs and required fields. Open the browser console too.</p>
+
+  <div class="cols">
+    <div class="col">
+      <h2>1. Rendered CPM form (visible)</h2>
+      <div id="cpm-form"></div>
+
+      <h2>2. Test externalSubmit</h2>
+      <label for="dbgEmail">Email</label>
+      <input type="email" id="dbgEmail" value="demo.user@example.com">
+
+      <label for="dbgRegion">Region</label>
+      <select id="dbgRegion">
+        <option value="India">India</option>
+        <option value="United States">United States</option>
+        <option value="United Kingdom">United Kingdom</option>
+        <option value="Australia">Australia</option>
+        <option value="Canada">Canada</option>
+        <option value="Germany">Germany</option>
+        <option value="Singapore">Singapore</option>
+        <option value="United Arab Emirates">United Arab Emirates</option>
+        <option value="Europa Island">Europa Island</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <label><input type="checkbox" id="dbgMarketing" checked style="width:auto"> Marketing</label>
+      <label><input type="checkbox" id="dbgKyc" checked style="width:auto"> KYC</label>
+      <label><input type="checkbox" id="dbgClaim" checked style="width:auto"> Claim</label>
+
+      <div style="margin-top:16px">
+        <button id="dbgDump" class="secondary" type="button">Re-scan fields</button>
+        <button id="dbgSubmit" type="button">Run externalSubmit (demo entry)</button>
+      </div>
+      <div class="result" id="dbgResult"></div>
+    </div>
+
+    <div class="col">
+      <h2>3. Discovered field structure</h2>
+      <div id="fieldDump">Waiting for CPM form to render…</div>
+    </div>
+  </div>
+
+  <!-- Local-dev CORS workaround: route TrustArc requests through /trustarc-proxy -->
+  <script>
+    (function () {
+      var TA_HOST = 'https://cpm-form.trustarc.com';
+      var isLocalDev = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\d{1,3}(\.\d{1,3}){3})$/.test(location.hostname);
+      if (!isLocalDev) return;
+      var PROXY = location.origin + '/trustarc-proxy';
+      function rewrite(url) {
+        try {
+          if (typeof url === 'string' && url.indexOf(TA_HOST) === 0) {
+            return PROXY + url.slice(TA_HOST.length);
+          }
+        } catch (e) {}
+        return url;
+      }
+      var origOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (method, url) {
+        var args = Array.prototype.slice.call(arguments);
+        args[1] = rewrite(url);
+        return origOpen.apply(this, args);
+      };
+      if (window.fetch) {
+        var origFetch = window.fetch;
+        window.fetch = function (input, init) {
+          if (typeof input === 'string') input = rewrite(input);
+          else if (input && input.url) input = new Request(rewrite(input.url), input);
+          return origFetch.call(this, input, init);
+        };
+      }
+      console.log('[TrustArc] local-dev proxy active →', PROXY);
+    })();
+  </script>
+
+  <!-- TrustArc CPM initialisation (renders into #cpm-form, VISIBLE for debugging) -->
+  <script>
+    !function(){
+      "use strict";
+      var t=document.createElement("script");
+      t.src="https://cpm-form.trustarc.com/browser/client.js",
+      t.type="text/javascript",
+      t.defer=!0,document.body.appendChild(t),
+      window.trustarc=window.trustarc||{};
+      var r=window.trustarc;
+      r.upm=[];
+      for(var n=["init","destroy","externalSubmit"],e=0;e<n.length;e++){
+        var o=n[e];
+        r.upm[o]=r.upm[o]||function(t){
+          return function(){
+            var n=Array.prototype.slice.call(arguments);
+            r.upm.push([t,n])
+          }
+        }(o)
+      }
+      r.upm.init({
+        brandId:'1170da8e-ac0c-4bb0-b4ad-fe9c0322825a',
+        consentFormId:'2d84def1-2edd-4c35-9fc1-83cf21178d27',
+        containerId: 'cpm-form',
+      },
+      (error) => {
+        console.log('[CPM Error]', error);
+      })
+    }();
+  </script>
+
+  <script>
+    const dump = document.getElementById('fieldDump');
+    const resultEl = document.getElementById('dbgResult');
+
+    function scanFields() {
+      const container = document.getElementById('cpm-form');
+      const controls = container.querySelectorAll('input, select, textarea');
+      if (!controls.length) {
+        dump.textContent = 'No form controls found yet inside #cpm-form.\nThe CPM script may still be loading — click "Re-scan fields" in a moment.';
+        return;
+      }
+      const lines = [];
+      lines.push('Found ' + controls.length + ' control(s) inside #cpm-form:\n');
+      controls.forEach((el, i) => {
+        const info = {
+          index: i,
+          tag: el.tagName.toLowerCase(),
+          type: el.type || '',
+          name: el.name || '',
+          id: el.id || '',
+          required: el.required || el.getAttribute('aria-required') === 'true',
+        };
+        // Collect all data-* attributes (UIDs often live here)
+        const data = {};
+        for (const attr of el.attributes) {
+          if (attr.name.startsWith('data-') || attr.name === 'name' || attr.name === 'id') {
+            data[attr.name] = attr.value;
+          }
+        }
+        lines.push(JSON.stringify({ ...info, attrs: data }, null, 2));
+        // Closest labelled ancestor text for context
+        const label = el.closest('[data-field-id], [data-uid], fieldset, .field, div');
+        if (label) {
+          const text = (label.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+          if (text) lines.push('  label ≈ "' + text + '"');
+        }
+        lines.push('');
+      });
+      dump.textContent = lines.join('\n');
+      console.log('[CPM Debug] controls', controls);
+
+      // Mirror the CPM form's real <select> options into the demo region dropdown,
+      // so the demo entry sends a value that exactly matches CPM's config.
+      const cpmSelect = container.querySelector('select');
+      if (cpmSelect && cpmSelect.options.length) {
+        const dbgRegion = document.getElementById('dbgRegion');
+        const current = dbgRegion.value;
+        const realOpts = Array.from(cpmSelect.options)
+          .map((o) => ({ value: o.value, label: o.textContent.trim() }))
+          .filter((o) => o.value !== '');
+        if (realOpts.length && !dbgRegion.dataset.synced) {
+          dbgRegion.innerHTML = '';
+          realOpts.forEach((o) => {
+            const opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.label + '  [value="' + o.value + '"]';
+            dbgRegion.appendChild(opt);
+          });
+          dbgRegion.dataset.synced = '1';
+          console.log('[CPM Debug] synced region options from CPM form', realOpts);
+          lines.push('\n>>> Region dropdown synced from CPM form. Real option values above.');
+          dump.textContent = lines.join('\n');
+        }
+      }
+    }
+
+    // Re-scan a few times as the async CPM script mounts the form.
+    let tries = 0;
+    const poll = setInterval(() => {
+      scanFields();
+      if (++tries > 15) clearInterval(poll);
+    }, 1000);
+
+    document.getElementById('dbgDump').addEventListener('click', scanFields);
+
+    const CPM_FIELDS = {
+      marketing:    '8cef8b0b-fe5b-4df9-85a5-a063319815fa',
+      kyc:          'cf6d3110-80e3-4f4b-b07c-f57326f9f211',
+      claim:        '3f069fb4-12b0-454c-ac5a-d068eab6d6f6',
+      email:        '349c4854-4370-43f9-bc6b-6705185b9624',
+      jurisdiction: '00000000-0000-0000-0000-100000000000',
+    };
+
+    document.getElementById('dbgSubmit').addEventListener('click', async () => {
+      resultEl.textContent = '';
+      resultEl.className = 'result';
+
+      const payload = {
+        [CPM_FIELDS.marketing]:    document.getElementById('dbgMarketing').checked,
+        [CPM_FIELDS.kyc]:          document.getElementById('dbgKyc').checked,
+        [CPM_FIELDS.claim]:        document.getElementById('dbgClaim').checked,
+        [CPM_FIELDS.email]:        document.getElementById('dbgEmail').value.trim(),
+        [CPM_FIELDS.jurisdiction]: document.getElementById('dbgRegion').value,
+      };
+      console.log('[CPM Debug] submitting demo entry', payload);
+
+      try {
+        const response = await window.trustarc.upm.externalSubmit()(payload);
+        console.log('[CPM Debug] SUCCESS', response);
+        resultEl.textContent = 'SUCCESS — demo entry submitted. See console for response.';
+        resultEl.className = 'result ok';
+      } catch (error) {
+        console.error('[CPM Debug] ERROR', error);
+        resultEl.textContent = 'ERROR (' + (error && error.errorType) + '): ' + (error && error.message);
+        resultEl.className = 'result err';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,76 +1,115 @@
 // Visual-only interactions — no real form/data logic, just UI polish.
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Term plan lead form (SEC 08)
-  const termPlanForm = document.getElementById('termPlanForm');
+  // TrustArc CPM field UIDs
+  const CPM_FIELDS = {
+    marketing: '8cef8b0b-fe5b-4df9-85a5-a063319815fa',
+    kyc:       'cf6d3110-80e3-4f4b-b07c-f57326f9f211',
+    claim:     '3f069fb4-12b0-454c-ac5a-d068eab6d6f6',
+    email:     '349c4854-4370-43f9-bc6b-6705185b9624',
+    jurisdiction: '00000000-0000-0000-0000-100000000000',
+  };
+
   const calcFormMessage = document.getElementById('calcFormMessage');
-
-  if (termPlanForm) {
-    termPlanForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const emailInput = document.getElementById('calcEmail');
-      const submitBtn = termPlanForm.querySelector('.calc-submit');
-
-      if (!emailInput.value.trim()) {
-        showCalcMessage('Email is required.', 'error');
-        emailInput.focus();
-        return;
-      }
-
-      if (!emailInput.checkValidity()) {
-        showCalcMessage('Please enter a valid email address.', 'error');
-        emailInput.focus();
-        return;
-      }
-
-      const payload = {
-        fullName: document.getElementById('calcFullName').value.trim(),
-        gender: termPlanForm.querySelector('input[name="calcGender"]:checked')?.value || '',
-        tobacco: termPlanForm.querySelector('input[name="calcTobacco"]:checked')?.value || '',
-        dob: document.getElementById('calcDob').value.trim(),
-        mobile: document.getElementById('calcMobile').value.trim(),
-        email: emailInput.value.trim(),
-        consent: document.getElementById('calcConsent').checked,
-      };
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting...';
-      showCalcMessage('', '');
-
-      try {
-        const res = await fetch('api/term-plan-leads', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          throw new Error(data.message || 'Submission failed. Please try again.');
-        }
-
-        showCalcMessage(data.message || 'Thank you! We will connect with you soon.', 'success');
-        termPlanForm.reset();
-        document.getElementById('calcDob').value = '01/01/1985';
-        document.querySelector('input[name="calcGender"][value="Male"]').checked = true;
-        document.querySelector('input[name="calcTobacco"][value="No"]').checked = true;
-        document.getElementById('calcConsent').checked = true;
-      } catch (err) {
-        showCalcMessage(err.message, 'error');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Connect with us now';
-      }
-    });
-  }
+  const externalSubmitBtn = document.getElementById('external-submit');
 
   function showCalcMessage(text, type) {
     if (!calcFormMessage) return;
     calcFormMessage.textContent = text;
     calcFormMessage.className = 'calc-form-message';
     if (type) calcFormMessage.classList.add(`calc-form-message--${type}`);
+  }
+
+  function validateForm() {
+    const emailInput = document.getElementById('calcEmail');
+    const jurisdiction = document.getElementById('calcJurisdiction');
+
+    if (!emailInput.value.trim()) {
+      showCalcMessage('Email is required.', 'error');
+      emailInput.focus();
+      return false;
+    }
+    if (!emailInput.checkValidity()) {
+      showCalcMessage('Please enter a valid email address.', 'error');
+      emailInput.focus();
+      return false;
+    }
+    if (!jurisdiction.value) {
+      showCalcMessage('Please select a region.', 'error');
+      jurisdiction.focus();
+      return false;
+    }
+    return true;
+  }
+
+  if (externalSubmitBtn) {
+    externalSubmitBtn.addEventListener('click', async () => {
+      if (!validateForm()) return;
+
+      const email        = document.getElementById('calcEmail').value.trim();
+      const jurisdiction = document.getElementById('calcJurisdiction').value;
+      const marketing    = document.getElementById('calcConsentMarketing').checked;
+      const kyc          = document.getElementById('calcConsentKyc').checked;
+      const claim        = document.getElementById('calcConsentClaim').checked;
+
+      externalSubmitBtn.disabled = true;
+      externalSubmitBtn.textContent = 'Submitting...';
+      showCalcMessage('', '');
+
+      const cpmPayload = {
+        [CPM_FIELDS.marketing]:    marketing,
+        [CPM_FIELDS.kyc]:          kyc,
+        [CPM_FIELDS.claim]:        claim,
+        [CPM_FIELDS.email]:        email,
+        [CPM_FIELDS.jurisdiction]: jurisdiction,
+      };
+      console.log('[CPM] Submitting payload', cpmPayload);
+
+      try {
+        const response = await window.trustarc.upm.externalSubmit()(cpmPayload);
+
+        showCalcMessage('Thank you! Your consent has been recorded and we will connect with you soon.', 'success');
+
+        // Also persist the lead to the local backend
+        const termPlanForm = document.getElementById('termPlanForm');
+        const payload = {
+          fullName:   document.getElementById('calcFullName').value.trim(),
+          gender:     termPlanForm.querySelector('input[name="calcGender"]:checked')?.value || '',
+          tobacco:    termPlanForm.querySelector('input[name="calcTobacco"]:checked')?.value || '',
+          dob:        document.getElementById('calcDob').value.trim(),
+          mobile:     document.getElementById('calcMobile').value.trim(),
+          email,
+          consent:    document.getElementById('calcConsent').checked,
+        };
+        fetch('api/term-plan-leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+
+        // Reset form
+        termPlanForm.reset();
+        document.getElementById('calcDob').value = '01/01/1985';
+        document.querySelector('input[name="calcGender"][value="Male"]').checked = true;
+        document.querySelector('input[name="calcTobacco"][value="No"]').checked = true;
+        document.getElementById('calcConsent').checked = true;
+
+        console.log('[CPM] Submission success', response);
+      } catch (error) {
+        console.error('[CPM] Submission error', error);
+
+        if (error && error.errorType === 'form') {
+          showCalcMessage(error.message || 'Please check your entries and try again.', 'error');
+        } else if (error && error.errorType === 'server') {
+          showCalcMessage(error.message || 'A server error occurred. Please try again later.', 'error');
+        } else {
+          showCalcMessage('Submission failed. Please try again.', 'error');
+        }
+      } finally {
+        externalSubmitBtn.disabled = false;
+        externalSubmitBtn.textContent = 'Connect with us now';
+      }
+    });
   }
 
   // Mobile hamburger toggle

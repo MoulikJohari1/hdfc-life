@@ -27,6 +27,47 @@ db.exec(`
   )
 `);
 
+// ---------------------------------------------------------------------------
+// TrustArc CPM reverse proxy (dev only).
+// The browser cannot POST directly to cpm-form.trustarc.com from localhost
+// because that origin is not in TrustArc's CORS allow-list. We forward the
+// request server-side (no browser CORS applies) and relay the response back.
+// Mounted BEFORE express.json() so the raw request body is preserved.
+// ---------------------------------------------------------------------------
+const TRUSTARC_HOST = 'https://cpm-form.trustarc.com';
+
+app.use('/trustarc-proxy', express.raw({ type: '*/*', limit: '10mb' }), async (req, res) => {
+  const targetUrl = TRUSTARC_HOST + req.originalUrl.replace(/^\/trustarc-proxy/, '');
+
+  try {
+    const headers = {};
+    for (const [k, v] of Object.entries(req.headers)) {
+      const key = k.toLowerCase();
+      if (['host', 'content-length', 'connection', 'origin', 'referer'].includes(key)) continue;
+      headers[k] = v;
+    }
+
+    const hasBody = !['GET', 'HEAD'].includes(req.method);
+    const upstream = await fetch(targetUrl, {
+      method: req.method,
+      headers,
+      body: hasBody && req.body && req.body.length ? req.body : undefined,
+    });
+
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.status(upstream.status);
+    upstream.headers.forEach((value, name) => {
+      const n = name.toLowerCase();
+      if (['content-encoding', 'transfer-encoding', 'content-length', 'connection'].includes(n)) return;
+      res.setHeader(name, value);
+    });
+    res.send(buf);
+  } catch (err) {
+    console.error('[TrustArc proxy] failed:', err);
+    res.status(502).json({ error: 'proxy_failed', message: err.message });
+  }
+});
+
 app.use(express.json());
 app.use(express.static(__dirname));
 
