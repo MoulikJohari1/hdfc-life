@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 56" role="img" aria-label="Horizon">
+  <!-- Mark: rising sun over horizon arc -->
+  <g fill="none" stroke="#ED1C24" stroke-width="3.2" stroke-linecap="round">
+    <path d="M8 36c8-14 24-14 32 0"/>
+  </g>
+  <circle cx="24" cy="18" r="6.5" fill="#ED1C24"/>
+  <line x1="6" y1="40" x2="42" y2="40" stroke="#233253" stroke-width="2.4" stroke-linecap="round"/>
+  <!-- Wordmark -->
+  <text x="52" y="38"
+        font-family="Poppins, Arial, Helvetica, sans-serif"
+        font-size="30"
+        font-weight="700"
+        letter-spacing="-0.5"
+        fill="#233253">Horizon</text>
+</svg>

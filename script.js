@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Also persist the lead to the local backend
         const termPlanForm = document.getElementById('termPlanForm');
+        const calcConsent = document.getElementById('calcConsent');
         const payload = {
           fullName:   document.getElementById('calcFullName').value.trim(),
           gender:     termPlanForm.querySelector('input[name="calcGender"]:checked')?.value || '',
@@ -79,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
           dob:        document.getElementById('calcDob').value.trim(),
           mobile:     document.getElementById('calcMobile').value.trim(),
           email,
-          consent:    document.getElementById('calcConsent').checked,
+          consent:    calcConsent ? calcConsent.checked : marketing,
         };
         fetch('api/term-plan-leads', {
           method: 'POST',
@@ -87,12 +88,24 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify(payload),
         }).catch(() => {});
 
+        // Demo: send one confirmation email per consent type
+        fetch('api/consent-emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            marketing,
+            kyc,
+            claim,
+            source: 'Website form',
+          }),
+        }).catch((err) => console.warn('[ConsentEmail] request failed', err));
+
         // Reset form
         termPlanForm.reset();
-        document.getElementById('calcDob').value = '01/01/1985';
         document.querySelector('input[name="calcGender"][value="Male"]').checked = true;
         document.querySelector('input[name="calcTobacco"][value="No"]').checked = true;
-        document.getElementById('calcConsent').checked = true;
+        if (calcConsent) calcConsent.checked = true;
 
         console.log('[CPM] Submission success', response);
       } catch (error) {
@@ -109,6 +122,21 @@ document.addEventListener('DOMContentLoaded', () => {
         externalSubmitBtn.disabled = false;
         externalSubmitBtn.textContent = 'Connect with us now';
       }
+    });
+  }
+
+  // Date of Birth: keep DD/MM/YYYY as the user types
+  const calcDob = document.getElementById('calcDob');
+  if (calcDob) {
+    calcDob.addEventListener('input', () => {
+      const digits = calcDob.value.replace(/\D/g, '').slice(0, 8);
+      let formatted = digits;
+      if (digits.length > 4) {
+        formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+      } else if (digits.length > 2) {
+        formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+      }
+      calcDob.value = formatted;
     });
   }
 
@@ -155,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- Cookie Settings + Preference Center ----
   const cookieModal = document.getElementById('cookieModal');
-  const preferenceModal = document.getElementById('preferenceModal');
 
   function openModal(modal) {
     if (!modal) return;
@@ -173,23 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => openModal(cookieModal));
   });
 
-  document.querySelectorAll('.ck-open-preference').forEach((btn) => {
-    btn.addEventListener('click', () => openModal(preferenceModal));
-  });
-
-  // Close on overlay / close button
+  // Close on overlay / close button (cookie modal)
   document.querySelectorAll('[data-ck-close]').forEach((el) => {
     el.addEventListener('click', () => {
       closeModal(el.closest('.ck-modal'));
     });
-  });
-
-  // Close on Escape
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      closeModal(cookieModal);
-      closeModal(preferenceModal);
-    }
   });
 
   // Cookie preference toggles
@@ -223,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setCookieMessage('Your cookie preferences have been saved.', 'success');
     });
 
-    // Restore any previously saved preferences
     try {
       const saved = JSON.parse(localStorage.getItem('hdfc_cookie_prefs') || 'null');
       if (saved) {
@@ -236,36 +250,276 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Preference Center email step
-  const preferenceEmailForm = document.getElementById('preferenceEmailForm');
-  if (preferenceEmailForm) {
-    const preferenceMessage = document.getElementById('preferenceMessage');
-    const preferenceEmail = document.getElementById('preferenceEmail');
+  // ---- Preference Center controller (TrustArc via /api/preference-center) ----
+  (function initPreferenceCenter() {
+    // Relative path so this works under /hdfc-life/ (and any other subpath deploy).
+    const ENDPOINT = 'api/preference-center';
+    const overlay = document.getElementById('prefCenterOverlay');
+    if (!overlay) return;
 
-    function setPreferenceMessage(text, type) {
-      if (!preferenceMessage) return;
-      preferenceMessage.textContent = text;
-      preferenceMessage.className = 'ck-modal-message';
-      if (type) preferenceMessage.classList.add(`ck-${type}`);
+    const emailView = document.getElementById('prefEmailView');
+    const loadingView = document.getElementById('prefLoadingView');
+    const notFoundView = document.getElementById('prefNotFoundView');
+    const formView = document.getElementById('prefFormView');
+    const successView = document.getElementById('prefSuccessView');
+    const emailForm = document.getElementById('prefEmailForm');
+    const editForm = document.getElementById('prefEditForm');
+    const emailInput = document.getElementById('prefEmailInput');
+    const errorEl = document.getElementById('prefError');
+    const formErrorEl = document.getElementById('prefFormError');
+    const notFoundMsg = document.getElementById('prefNotFoundMsg');
+    const fieldsWrap = document.getElementById('prefFields');
+    const saveBtn = document.getElementById('prefSaveBtn');
+    const closeBtn = document.getElementById('prefCloseBtn');
+
+    let currentEmail = '';
+    let currentFields = [];
+
+    const views = [emailView, loadingView, notFoundView, formView, successView];
+
+    function showView(view) {
+      views.forEach((v) => {
+        if (!v) return;
+        v.classList.toggle('pref-hidden', v !== view);
+      });
     }
 
-    preferenceEmailForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const email = preferenceEmail.value.trim();
+    function openPrefCenter() {
+      if (errorEl) errorEl.textContent = '';
+      if (formErrorEl) formErrorEl.textContent = '';
+      if (emailInput) emailInput.value = '';
+      currentEmail = '';
+      currentFields = [];
+      showView(emailView);
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden', 'false');
+      setTimeout(() => emailInput && emailInput.focus(), 50);
+    }
 
-      if (!email) {
-        setPreferenceMessage('Email is required.', 'error');
-        preferenceEmail.focus();
-        return;
-      }
+    function closePrefCenter() {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
 
-      if (!preferenceEmail.checkValidity()) {
-        setPreferenceMessage('Please enter a valid email address.', 'error');
-        preferenceEmail.focus();
-        return;
-      }
-
-      setPreferenceMessage(`Thanks. We'll use ${email} to load your consent preferences.`, 'success');
+    document.querySelectorAll('.ck-open-preference').forEach((btn) => {
+      btn.addEventListener('click', openPrefCenter);
     });
-  }
+
+    closeBtn?.addEventListener('click', closePrefCenter);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closePrefCenter();
+    });
+
+    document.getElementById('prefTryAgainBtn')?.addEventListener('click', () => {
+      if (errorEl) errorEl.textContent = '';
+      showView(emailView);
+      emailInput?.focus();
+    });
+
+    document.getElementById('prefDoneBtn')?.addEventListener('click', closePrefCenter);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal(cookieModal);
+        if (overlay.classList.contains('open')) closePrefCenter();
+      }
+    });
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function isToggleType(type) {
+      return type === 'Checkbox' || type === 'ToggleSwitch' || type === 'Toggle';
+    }
+
+    function isSelectType(type) {
+      return type === 'Country' || type === 'Select' || type === 'Dropdown';
+    }
+
+    // Prefer the same consent copy shown on the homepage form.
+    const CONSENT_LABELS = {
+      [CPM_FIELDS.marketing]:
+        'I authorize Horizon and its representatives to contact me through Call, Email, SMS or WhatsApp. This consent overrides my registration under DNC / NDNC (this would mean we would contact you even if you are registered on any Do Not Disturb list).',
+      [CPM_FIELDS.kyc]:
+        'I consent to the collection and processing of my personal identifiers and contact details for mandatory KYC checks, identity verification, and issuance, renewal, claims, and servicing of insurance policies as per applicable regulations.',
+      [CPM_FIELDS.claim]:
+        'I consent to verification of my personal information through authorized sources or service providers for KYC, fraud prevention, regulatory compliance, policy servicing, and claims processing.',
+    };
+
+    function displayLabel(field) {
+      return CONSENT_LABELS[field.id] || field.label || 'Field';
+    }
+
+    function renderForm(data) {
+      currentFields = Array.isArray(data.fields) ? data.fields : [];
+      fieldsWrap.innerHTML = '';
+
+      currentFields.forEach((field) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'pref-field';
+        wrap.dataset.fieldId = field.id;
+        wrap.dataset.fieldType = field.type;
+        // Keep email identifier read-only in the preference editor.
+        if (field.type === 'Email') field.readOnly = true;
+        const label = displayLabel(field);
+
+        if (isToggleType(field.type)) {
+          wrap.classList.add('pref-field--consent');
+          wrap.innerHTML =
+            '<div class="pref-field-row">' +
+              '<span class="pref-field-label">' + escapeHtml(label) + '</span>' +
+              '<label class="pref-toggle">' +
+                '<input type="checkbox" data-pref-field="' + escapeHtml(field.id) + '"' +
+                  (field.value ? ' checked' : '') +
+                  (field.readOnly ? ' disabled' : '') + '>' +
+                '<span class="pref-toggle-slider"></span>' +
+              '</label>' +
+            '</div>';
+        } else if (isSelectType(field.type)) {
+          const options = (field.options || []).map((opt) => {
+            const selected = String(opt.value) === String(field.value) ? ' selected' : '';
+            return '<option value="' + escapeHtml(opt.value) + '"' + selected + '>' +
+              escapeHtml(opt.label) + '</option>';
+          }).join('');
+          wrap.innerHTML =
+            '<label class="pref-field-label" for="pref-field-' + escapeHtml(field.id) + '">' +
+              escapeHtml(label) +
+            '</label>' +
+            '<select id="pref-field-' + escapeHtml(field.id) + '" class="pref-input" data-pref-field="' +
+              escapeHtml(field.id) + '"' + (field.readOnly ? ' disabled' : '') + '>' +
+              options +
+            '</select>';
+        } else {
+          const inputType = field.type === 'Email' ? 'email'
+            : (field.type === 'Phone' || field.type === 'Telephone' ? 'tel' : 'text');
+          wrap.innerHTML =
+            '<label class="pref-field-label" for="pref-field-' + escapeHtml(field.id) + '">' +
+              escapeHtml(label) +
+            '</label>' +
+            '<input type="' + inputType + '" id="pref-field-' + escapeHtml(field.id) +
+              '" class="pref-input" data-pref-field="' + escapeHtml(field.id) +
+              '" value="' + escapeHtml(field.value || '') + '"' +
+              (field.readOnly ? ' readonly' : '') +
+              (field.required ? ' required' : '') + '>';
+        }
+
+        fieldsWrap.appendChild(wrap);
+      });
+
+      if (formErrorEl) formErrorEl.textContent = '';
+      showView(formView);
+    }
+
+    function collectFormFieldIdValues() {
+      const values = [];
+      fieldsWrap.querySelectorAll('[data-pref-field]').forEach((el) => {
+        const id = el.getAttribute('data-pref-field');
+        let value;
+        if (el.type === 'checkbox') {
+          value = el.checked ? 'true' : 'false';
+        } else {
+          value = el.value;
+        }
+        values.push({ [id]: [String(value)] });
+      });
+      return values;
+    }
+
+    emailForm?.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (errorEl) errorEl.textContent = '';
+
+      const email = (emailInput?.value || '').trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (errorEl) errorEl.textContent = 'Please enter a valid email address.';
+        return;
+      }
+
+      currentEmail = email;
+      showView(loadingView);
+
+      fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'load', email }),
+      })
+        .then((res) => {
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.includes('application/json')) {
+            throw new Error('Preference Center API returned a non-JSON response (' + res.status + ').');
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (data && data.exists && data.fields && data.fields.length) {
+            renderForm(data);
+          } else {
+            if (notFoundMsg) {
+              notFoundMsg.textContent = (data && data.error)
+                ? data.error
+                : "We couldn't find any preferences associated with that email address.";
+            }
+            showView(notFoundView);
+          }
+        })
+        .catch((err) => {
+          console.error('[Preference Center] load failed', err);
+          if (notFoundMsg) notFoundMsg.textContent = 'Something went wrong. Please try again later.';
+          showView(notFoundView);
+        });
+    });
+
+    editForm?.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (formErrorEl) formErrorEl.textContent = '';
+
+      const formFieldIdValues = collectFormFieldIdValues();
+      if (!formFieldIdValues.length) {
+        if (formErrorEl) formErrorEl.textContent = 'No preferences to save.';
+        return;
+      }
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+      }
+      showView(loadingView);
+
+      fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit',
+          email: currentEmail,
+          formFieldIdValues,
+        }),
+      })
+        .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+          if (ok && data && data.success) {
+            showView(successView);
+          } else {
+            if (formErrorEl) {
+              formErrorEl.textContent = (data && data.error) || 'Failed to save preferences.';
+            }
+            showView(formView);
+          }
+        })
+        .catch(() => {
+          if (formErrorEl) formErrorEl.textContent = 'Something went wrong. Please try again later.';
+          showView(formView);
+        })
+        .finally(() => {
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Preferences';
+          }
+        });
+    });
+  })();
 });

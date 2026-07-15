@@ -20,6 +20,9 @@ data/*.db-journal
 data/*.db-wal
 data/*.db-shm
 
+# Demo consent email outbox
+data/outbox/
+
 # Environment / secrets
 .env
 .env.*

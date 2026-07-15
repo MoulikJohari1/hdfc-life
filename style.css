@@ -251,7 +251,7 @@ h1, h2, h3, h4, h5, h6 { margin: 0; font-family: var(--font-family); }
 .sec-header-main .hm-logo {
   flex-shrink: 0;
 }
-.sec-header-main .hm-logo img { width: 69px; height: 45px; }
+.sec-header-main .hm-logo img { width: auto; height: 40px; max-width: 160px; object-fit: contain; }
 
 .sec-header-main .hm-nav { flex: 1; }
 .sec-header-main .hm-nav > ul {
@@ -2880,4 +2880,20 @@ h1, h2, h3, h4, h5, h6 { margin: 0; font-family: var(--font-family); }
 
 @media (max-width: 600px) {
   .sec-floating-widget .fq-panel { width: 84vw; right: 40px; }
+}
+
+/* TrustArc preference center popframe — left-aligned full-height panel */
+.truste_popframe {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 420px !important;
+    max-width: 90vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    transform: none !important;
+    z-index: 2147483647 !important;
 }
